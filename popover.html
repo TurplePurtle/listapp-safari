@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>lili (popover)</title>
+<style>
+body {
+  background-color: #eee;
+  margin: 0;
+  padding: 0;
+  height: 99%;
+  width: 100%;
+}
+#content-frame {
+  border: 0;
+  height: 100%;
+  width: 100%;
+}
+</style>
+<script>
+var host = "https://getlili.herokuapp.com";
+NodeList.prototype.forEach = Array.prototype.forEach;
+NodeList.prototype.map = Array.prototype.map;
+NodeList.prototype.reduce = Array.prototype.reduce;
+
+function buildQueryString(params) {
+  var data = [];
+  for (var i in params) {
+    data.push(encodeURIComponent(i) + "=" + encodeURIComponent(params[i]));
+  }
+  return data.join("&");
+}
+
+function ajax(method, url, headers, body, callback) {
+  var req = new XMLHttpRequest;
+  req.open(method, url, false);
+  for (var i in headers) {
+    req.setRequestHeader(i, headers[i]);
+  }
+  req.onload = callback;
+  req.send(body);
+}
+
+function ajaxGet(url, callback, params, headers) {
+  headers = headers || {};
+  if (typeof params === "object") {
+    url = url + "?" + buildQueryString(params);
+  }
+  ajax("GET", url, headers, null, callback);
+}
+
+function ajaxPost(url, callback, params, headers) {
+  headers = headers || {};
+  headers["Content-type"] = headers["Content-type"] || "application/x-www-form-urlencoded";
+  ajax("POST", url, headers, buildQueryString(params), callback);
+}
+
+var urlNorm = {
+  _a: document.createElement("a"),
+  host: host,
+  url: function(url) {
+    this._a.href = url;
+    //this._a.hostname = host;
+    return this.host + this._a.pathname;
+  },
+  el: function(el, prop) {
+    this._a.href = el[prop];
+    this._a.hostname = host;
+    el[prop] = this._a.href;
+    return el;
+  },
+}
+</script>
+<body>
+
+<script>
+ajaxGet(host + "/", function(e) {
+  var html = e.target.responseText;
+  var doc = document.documentElement.cloneNode()
+  var a = document.createElement("a");
+  doc.innerHTML = html;
+  doc.head = doc.querySelector("head");
+  doc.body = doc.querySelector("body");
+  doc.querySelectorAll("link[href]").forEach(function(el) {
+    var url = urlNorm.url(el.href);
+    ajaxGet(url, function(e) {
+      var css = e.target.responseText;
+      var style = document.createElement("style");
+      style.innerText = css;
+      el.parentElement.replaceChild(style, el);
+    });
+  });
+  doc.querySelectorAll("script[src]").forEach(function(el) {
+    var url = urlNorm.url(el.src);
+    ajaxGet(url, function(e) {
+      var js = e.target.responseText;
+      eval(js);
+    });
+  });
+  document.documentElement.replaceChild(doc.head, document.head);
+  document.documentElement.replaceChild(doc.body, document.body);
+}, null);
+</script>
+
+</body>
+</head>
+</html>
